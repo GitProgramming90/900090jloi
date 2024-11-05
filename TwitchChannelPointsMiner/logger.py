@@ -12,10 +12,12 @@ import emoji
 from colorama import Fore, init
 
 from TwitchChannelPointsMiner.classes.Discord import Discord
+from TwitchChannelPointsMiner.classes.Webhook import Webhook
 from TwitchChannelPointsMiner.classes.Matrix import Matrix
 from TwitchChannelPointsMiner.classes.Settings import Events
 from TwitchChannelPointsMiner.classes.Telegram import Telegram
 from TwitchChannelPointsMiner.classes.Pushover import Pushover
+from TwitchChannelPointsMiner.classes.Gotify import Gotify
 from TwitchChannelPointsMiner.utils import remove_emoji
 
 
@@ -75,8 +77,10 @@ class LoggerSettings:
         "auto_clear",
         "telegram",
         "discord",
+        "webhook",
         "matrix",
         "pushover",
+        "gotify",
         "username"
     ]
 
@@ -94,8 +98,10 @@ class LoggerSettings:
         auto_clear: bool = True,
         telegram: Telegram or None = None,
         discord: Discord or None = None,
+        webhook: Webhook or None = None,
         matrix: Matrix or None = None,
         pushover: Pushover or None = None,
+        gotify: Gotify or None = None,
         username: str or None = None
     ):
         self.save = save
@@ -110,8 +116,10 @@ class LoggerSettings:
         self.auto_clear = auto_clear
         self.telegram = telegram
         self.discord = discord
+        self.webhook = webhook
         self.matrix = matrix
         self.pushover = pushover
+        self.gotify = gotify
         self.username = username
 
 
@@ -185,8 +193,10 @@ class GlobalFormatter(logging.Formatter):
         if hasattr(record, "event"):
             self.telegram(record)
             self.discord(record)
+            self.webhook(record)
             self.matrix(record)
             self.pushover(record)
+            self.gotify(record)
 
             if self.settings.colored is True:
                 record.msg = (
@@ -218,6 +228,18 @@ class GlobalFormatter(logging.Formatter):
         ):
             self.settings.discord.send(record.msg, record.event)
 
+    def webhook(self, record):
+        skip_webhook = False if hasattr(
+            record, "skip_webhook") is False else True
+
+        if (
+            self.settings.webhook is not None
+            and skip_webhook is False
+            and self.settings.webhook.endpoint
+            != "https://example.com/webhook"
+        ):
+            self.settings.webhook.send(record.msg, record.event)
+
     def matrix(self, record):
         skip_matrix = False if hasattr(
             record, "skip_matrix") is False else True
@@ -241,6 +263,18 @@ class GlobalFormatter(logging.Formatter):
             and self.settings.pushover.token != "YOUR-APPLICATION-TOKEN"
         ):
             self.settings.pushover.send(record.msg, record.event)
+
+    def gotify(self, record):
+        skip_gotify = False if hasattr(
+            record, "skip_gotify") is False else True
+
+        if (
+            self.settings.gotify is not None
+            and skip_gotify is False
+            and self.settings.gotify.endpoint
+            != "https://example.com/message?token=TOKEN"
+        ):
+            self.settings.gotify.send(record.msg, record.event)
 
 
 def configure_loggers(username, settings):
